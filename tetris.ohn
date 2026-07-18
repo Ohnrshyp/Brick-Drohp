@@ -1,0 +1,640 @@
+// tetris.ohn
+// Ohnrscript Example: Tetris Game Engine
+//
+// A complete Tetris engine written entirely in pure i32 arithmetic, following
+// the strict Data-Oriented Design (DOD) rules in developer_guide.md:
+//   - No dynamic objects, no strings, no floats, no switch, no closures.
+//   - All state lives in module-level TypedArray arenas / i32 globals,
+//     pre-allocated once at load time.
+//   - Gravity timing uses an integer frame-counter (tick() is called once per
+//     rendered frame by the host) instead of floating-point delta-time.
+//   - Piece randomization uses a hand-rolled xorshift32 PRNG in pure i32 math
+//     for a deterministic 7-bag sequence — no Math.random().
+//
+// This file is the ENTIRE game engine: board state, collision, rotation,
+// line-clear, scoring, and level speed-up. It exports a small function-call
+// API (module.exports below). Nothing outside this file knows how Tetris
+// works — a host (browser canvas, terminal renderer, etc.) only ever reads
+// getCell()/getScore()/etc. and calls the input functions. That mirrors how
+// the V-language Doom port keeps 100% of the game logic in V and only calls
+// out to SDL for pixels/input; here the "SDL" is a ~40-line JS/canvas shim.
+//
+// Compile (V8):    node compiler/scripts/compile.js tetris.ohn
+// Compile (LLVM):  node compiler/scripts/compile.js --target llvm tetris.ohn
+
+'use strict';
+
+// ───────────────────────── Constants ─────────────────────────
+
+const BOARD_WIDTH = 10;
+const BOARD_HEIGHT = 20;
+const BOARD_SIZE = 200;       // BOARD_WIDTH * BOARD_HEIGHT
+const BOX = 4;                // every piece lives in a 4x4 bounding box
+const PIECE_COUNT = 7;        // I, O, T, S, Z, J, L
+const SHAPE_TABLE_SIZE = 28;  // PIECE_COUNT * 4 rotations
+
+const SPAWN_X = 3;
+const SPAWN_Y = 0;
+
+const BASE_TICK_THRESHOLD = 48; // frames per gravity step at level 1
+const MIN_TICK_THRESHOLD = 6;   // fastest gravity allowed at high levels
+const LINES_PER_LEVEL = 10;
+
+// ───────────────────────── Module-Level State (DOD arenas) ─────────────────────────
+
+// Locked board cells. 0 = empty, 1-7 = locked piece color id (type + 1).
+let board = new Uint8Array(BOARD_SIZE);
+
+// Flat rotation-shape lookup table. Index = type * 4 + rotation.
+// Each entry is a 16-bit mask over a 4x4 box: bit (row*4 + col) is set
+// when that cell is occupied. Filled once by initPieceShapes().
+let pieceShapes = new Int32Array(SHAPE_TABLE_SIZE);
+
+// 7-bag randomizer state.
+let bag = new Int32Array(PIECE_COUNT);
+let bagPos = 7;       // 7 forces an immediate refill on first draw
+let rngState = 1;     // xorshift32 state, must never be 0
+
+// Active (falling) piece.
+let curType = 0;
+let curRotation = 0;
+let curX = SPAWN_X;
+let curY = SPAWN_Y;
+let nextType = 0;
+
+// Progress / scoring.
+let score = 0;
+let level = 1;
+let linesCleared = 0;
+let gameOver = 0;
+let paused = 0;
+
+// Gravity timing (integer frame counter, no floats).
+let tickCounter = 0;
+let tickThreshold = BASE_TICK_THRESHOLD;
+
+// ───────────────────────── PRNG (xorshift32) ─────────────────────────
+
+function nextRandom() {
+    let x = rngState | 0;
+    x = (x ^ (x << 13)) | 0;
+    x = (x ^ (x >>> 17)) | 0;
+    x = (x ^ (x << 5)) | 0;
+    rngState = x | 0;
+    return x | 0;
+}
+
+// Returns an unsigned value in [0, maxExclusive).
+function randRange(maxExclusive) {
+    let r = nextRandom() | 0;
+    if (r < 0) {
+        r = (0 - r) | 0;
+    }
+    return (r % maxExclusive) | 0;
+}
+
+// ───────────────────────── Piece Shape Table ─────────────────────────
+// Generated from standard 4x4-box tetromino layouts. Bit index = row*4+col,
+// bit 0 = top-left of the box. See tests/tetris.test.js for a
+// rendered sanity check of every rotation.
+
+function initPieceShapes() {
+    // I
+    pieceShapes[0] = 0x00F0;
+    pieceShapes[1] = 0x4444;
+    pieceShapes[2] = 0x0F00;
+    pieceShapes[3] = 0x2222;
+    // O
+    pieceShapes[4] = 0x0660;
+    pieceShapes[5] = 0x0660;
+    pieceShapes[6] = 0x0660;
+    pieceShapes[7] = 0x0660;
+    // T
+    pieceShapes[8] = 0x0270;
+    pieceShapes[9] = 0x0464;
+    pieceShapes[10] = 0x0E40;
+    pieceShapes[11] = 0x2620;
+    // S
+    pieceShapes[12] = 0x0360;
+    pieceShapes[13] = 0x0462;
+    pieceShapes[14] = 0x06C0;
+    pieceShapes[15] = 0x4620;
+    // Z
+    pieceShapes[16] = 0x0630;
+    pieceShapes[17] = 0x0264;
+    pieceShapes[18] = 0x0C60;
+    pieceShapes[19] = 0x2640;
+    // J
+    pieceShapes[20] = 0x0710;
+    pieceShapes[21] = 0x0226;
+    pieceShapes[22] = 0x08E0;
+    pieceShapes[23] = 0x6440;
+    // L
+    pieceShapes[24] = 0x0740;
+    pieceShapes[25] = 0x0622;
+    pieceShapes[26] = 0x02E0;
+    pieceShapes[27] = 0x4460;
+    return 0;
+}
+
+function getShapeBit(type, rotation, row, col) {
+    let idx = ((type * 4) + rotation) | 0;
+    let mask = pieceShapes[idx] | 0;
+    let bitIndex = ((row * 4) + col) | 0;
+    let bit = (mask >> bitIndex) & 1;
+    return bit | 0;
+}
+
+// ───────────────────────── 7-Bag Randomizer ─────────────────────────
+
+function refillBag() {
+    let i = 0;
+    while (i < PIECE_COUNT) {
+        bag[i] = i;
+        i = (i + 1) | 0;
+    }
+    // Fisher-Yates shuffle using the deterministic PRNG.
+    i = (PIECE_COUNT - 1) | 0;
+    while (i > 0) {
+        let j = randRange((i + 1) | 0) | 0;
+        let tmp = bag[i] | 0;
+        bag[i] = bag[j];
+        bag[j] = tmp;
+        i = (i - 1) | 0;
+    }
+    bagPos = 0;
+    return 0;
+}
+
+function drawFromBag() {
+    if (bagPos >= PIECE_COUNT) {
+        refillBag();
+    }
+    let t = bag[bagPos] | 0;
+    bagPos = (bagPos + 1) | 0;
+    return t | 0;
+}
+
+// ───────────────────────── Collision & Board Helpers ─────────────────────────
+
+function boardIndex(x, y) {
+    return ((y * BOARD_WIDTH) + x) | 0;
+}
+
+// Returns 1 if placing `type` at rotation/px/py would collide with the
+// walls, floor, or a locked cell. Returns 0 if the placement is legal.
+function checkCollision(type, rotation, px, py) {
+    let row = 0;
+    while (row < BOX) {
+        let col = 0;
+        while (col < BOX) {
+            let bit = getShapeBit(type, rotation, row, col) | 0;
+            if (bit === 1) {
+                let bx = (px + col) | 0;
+                let by = (py + row) | 0;
+                if (bx < 0) {
+                    return 1;
+                }
+                if (bx >= BOARD_WIDTH) {
+                    return 1;
+                }
+                if (by < 0) {
+                    return 1;
+                }
+                if (by >= BOARD_HEIGHT) {
+                    return 1;
+                }
+                if (board[boardIndex(bx, by)] !== 0) {
+                    return 1;
+                }
+            }
+            col = (col + 1) | 0;
+        }
+        row = (row + 1) | 0;
+    }
+    return 0;
+}
+
+// ───────────────────────── Spawning ─────────────────────────
+
+function spawnPiece() {
+    curType = nextType | 0;
+    nextType = drawFromBag() | 0;
+    curRotation = 0;
+    curX = SPAWN_X;
+    curY = SPAWN_Y;
+    if (checkCollision(curType, curRotation, curX, curY) === 1) {
+        gameOver = 1;
+    }
+    return 0;
+}
+
+// ───────────────────────── Locking & Line Clear ─────────────────────────
+
+function lockPiece() {
+    let row = 0;
+    while (row < BOX) {
+        let col = 0;
+        while (col < BOX) {
+            let bit = getShapeBit(curType, curRotation, row, col) | 0;
+            if (bit === 1) {
+                let bx = (curX + col) | 0;
+                let by = (curY + row) | 0;
+                board[boardIndex(bx, by)] = (curType + 1) | 0;
+            }
+            col = (col + 1) | 0;
+        }
+        row = (row + 1) | 0;
+    }
+    clearLines();
+    spawnPiece();
+    return 0;
+}
+
+function isRowFull(y) {
+    let x = 0;
+    while (x < BOARD_WIDTH) {
+        if (board[boardIndex(x, y)] === 0) {
+            return 0;
+        }
+        x = (x + 1) | 0;
+    }
+    return 1;
+}
+
+function copyRow(srcY, dstY) {
+    let x = 0;
+    while (x < BOARD_WIDTH) {
+        board[boardIndex(x, dstY)] = board[boardIndex(x, srcY)];
+        x = (x + 1) | 0;
+    }
+    return 0;
+}
+
+function clearRow(y) {
+    let x = 0;
+    while (x < BOARD_WIDTH) {
+        board[boardIndex(x, y)] = 0;
+        x = (x + 1) | 0;
+    }
+    return 0;
+}
+
+// Compacts the board downward, removing every full row, then updates
+// score/level/tick-speed. Returns the number of lines cleared this call.
+function clearLines() {
+    let writeY = (BOARD_HEIGHT - 1) | 0;
+    let readY = (BOARD_HEIGHT - 1) | 0;
+    let cleared = 0;
+
+    while (readY >= 0) {
+        if (isRowFull(readY) === 1) {
+            cleared = (cleared + 1) | 0;
+        } else {
+            if (writeY !== readY) {
+                copyRow(readY, writeY);
+            }
+            writeY = (writeY - 1) | 0;
+        }
+        readY = (readY - 1) | 0;
+    }
+
+    // Any remaining rows above writeY are now empty.
+    while (writeY >= 0) {
+        clearRow(writeY);
+        writeY = (writeY - 1) | 0;
+    }
+
+    if (cleared > 0) {
+        applyLineClearScore(cleared);
+        linesCleared = (linesCleared + cleared) | 0;
+        updateLevel();
+    }
+
+    return cleared | 0;
+}
+
+function applyLineClearScore(cleared) {
+    let points = 0;
+    if (cleared === 1) {
+        points = 40 * level;
+    } else if (cleared === 2) {
+        points = 100 * level;
+    } else if (cleared === 3) {
+        points = 300 * level;
+    } else if (cleared === 4) {
+        points = 1200 * level;
+    }
+    score = (score + points) | 0;
+    return 0;
+}
+
+function updateLevel() {
+    let newLevel = (1 + (linesCleared / LINES_PER_LEVEL) | 0) | 0;
+    if (newLevel !== level) {
+        level = newLevel | 0;
+        let newThreshold = (BASE_TICK_THRESHOLD - ((level - 1) * 4)) | 0;
+        if (newThreshold < MIN_TICK_THRESHOLD) {
+            newThreshold = MIN_TICK_THRESHOLD;
+        }
+        tickThreshold = newThreshold | 0;
+    }
+    return 0;
+}
+
+// ───────────────────────── Player Actions (exported API) ─────────────────────────
+
+function initGame(seed) {
+    if (seed === 0) {
+        rngState = 1;
+    } else {
+        rngState = seed | 0;
+    }
+
+    let i = 0;
+    while (i < BOARD_SIZE) {
+        board[i] = 0;
+        i = (i + 1) | 0;
+    }
+
+    initPieceShapes();
+
+    bagPos = 7;
+    score = 0;
+    level = 1;
+    linesCleared = 0;
+    gameOver = 0;
+    paused = 0;
+    tickCounter = 0;
+    tickThreshold = BASE_TICK_THRESHOLD;
+
+    nextType = drawFromBag() | 0;
+    spawnPiece();
+    return 0;
+}
+
+function moveLeft() {
+    if (gameOver === 1) {
+        return 0;
+    }
+    if (paused === 1) {
+        return 0;
+    }
+    let nx = (curX - 1) | 0;
+    if (checkCollision(curType, curRotation, nx, curY) === 0) {
+        curX = nx;
+    }
+    return 0;
+}
+
+function moveRight() {
+    if (gameOver === 1) {
+        return 0;
+    }
+    if (paused === 1) {
+        return 0;
+    }
+    let nx = (curX + 1) | 0;
+    if (checkCollision(curType, curRotation, nx, curY) === 0) {
+        curX = nx;
+    }
+    return 0;
+}
+
+function rotateCW() {
+    if (gameOver === 1) {
+        return 0;
+    }
+    if (paused === 1) {
+        return 0;
+    }
+    let nr = ((curRotation + 1) % 4) | 0;
+    if (checkCollision(curType, nr, curX, curY) === 0) {
+        curRotation = nr;
+    }
+    return 0;
+}
+
+function rotateCCW() {
+    if (gameOver === 1) {
+        return 0;
+    }
+    if (paused === 1) {
+        return 0;
+    }
+    let nr = ((curRotation + 3) % 4) | 0;
+    if (checkCollision(curType, nr, curX, curY) === 0) {
+        curRotation = nr;
+    }
+    return 0;
+}
+
+// Toggles the paused flag. No-op once the game has ended — pausing a
+// finished game is meaningless and would create a state combination
+// (gameOver === 1 && paused === 1) the rest of the engine never expects.
+function togglePause() {
+    if (gameOver === 1) {
+        return paused | 0;
+    }
+    paused = paused === 1 ? 0 : 1;
+    return paused | 0;
+}
+
+function isPaused() {
+    return paused | 0;
+}
+
+// Moves the piece down one row. If it can't move, locks it in place.
+// Returns 1 if the piece locked this call, 0 otherwise.
+function softDrop() {
+    if (gameOver === 1) {
+        return 0;
+    }
+    if (paused === 1) {
+        return 0;
+    }
+    let ny = (curY + 1) | 0;
+    if (checkCollision(curType, curRotation, curX, ny) === 0) {
+        curY = ny;
+        score = (score + 1) | 0;
+        tickCounter = 0;
+        return 0;
+    }
+    lockPiece();
+    tickCounter = 0;
+    return 1;
+}
+
+function hardDrop() {
+    if (gameOver === 1) {
+        return 0;
+    }
+    if (paused === 1) {
+        return 0;
+    }
+    let dropCount = 0;
+    while (checkCollision(curType, curRotation, curX, (curY + 1) | 0) === 0) {
+        curY = (curY + 1) | 0;
+        dropCount = (dropCount + 1) | 0;
+    }
+    score = (score + (dropCount * 2)) | 0;
+    lockPiece();
+    tickCounter = 0;
+    return 0;
+}
+
+// Called once per rendered host frame. Advances gravity by one frame-tick;
+// every tickThreshold calls, the piece falls one row. Returns gameOver.
+function tick() {
+    if (gameOver === 1) {
+        return 1;
+    }
+    // Check before incrementing tickCounter so a pause freezes the exact
+    // frame-count-to-next-gravity-step instead of losing progress.
+    if (paused === 1) {
+        return 0;
+    }
+    tickCounter = (tickCounter + 1) | 0;
+    if (tickCounter >= tickThreshold) {
+        tickCounter = 0;
+        let ny = (curY + 1) | 0;
+        if (checkCollision(curType, curRotation, curX, ny) === 0) {
+            curY = ny;
+        } else {
+            lockPiece();
+        }
+    }
+    return gameOver | 0;
+}
+
+// ───────────────────────── Read-Only Query API (for the render shim) ─────────────────────────
+
+// Returns the color id (0 empty, 1-7) to draw at (x, y), overlaying the
+// currently falling piece on top of the locked board. This is the only
+// function a renderer needs to draw the whole playfield.
+function getCell(x, y) {
+    let row = (y - curY) | 0;
+    let col = (x - curX) | 0;
+    if (row >= 0) {
+        if (row < BOX) {
+            if (col >= 0) {
+                if (col < BOX) {
+                    if (getShapeBit(curType, curRotation, row, col) === 1) {
+                        return (curType + 1) | 0;
+                    }
+                }
+            }
+        }
+    }
+    return board[boardIndex(x, y)] | 0;
+}
+
+function getBoardWidth() {
+    return BOARD_WIDTH;
+}
+
+function getBoardHeight() {
+    return BOARD_HEIGHT;
+}
+
+function getScore() {
+    return score | 0;
+}
+
+function getLevel() {
+    return level | 0;
+}
+
+function getLinesCleared() {
+    return linesCleared | 0;
+}
+
+function getActivePieceType() {
+    return curType | 0;
+}
+
+function getNextPieceType() {
+    return nextType | 0;
+}
+
+function isGameOver() {
+    return gameOver | 0;
+}
+
+function reset(seed) {
+    initGame(seed);
+    return 0;
+}
+
+// ───────────────────────── Test-Only Hooks ─────────────────────────
+// Not part of the public "renderer" API — only used by tetris.test.js to
+// set up deterministic board scenarios (e.g. a near-full row) without
+// depending on random piece placement.
+
+function debugSetCell(x, y, value) {
+    board[boardIndex(x, y)] = value | 0;
+    return 0;
+}
+
+function debugClearLines() {
+    return clearLines() | 0;
+}
+
+// ───────────────────────── Native Entry Point ─────────────────────────
+// Only meaningful on the LLVM target, where a `main()` function is required
+// to link a standalone binary (mirrors examples/hello-world.ohn). Runs a
+// short headless simulation — some real moves, then a forced 4-line clear —
+// and returns the total lines cleared (4) as the process exit code, so
+// `./tetris_native; echo $?` proves the compiled native binary actually
+// executed the Tetris engine's collision, movement, and line-clear logic.
+function main() {
+    initGame(42);
+    moveLeft();
+    moveRight();
+    rotateCW();
+    hardDrop();
+    hardDrop();
+    hardDrop();
+
+    let y = 16;
+    while (y < 20) {
+        let x = 0;
+        while (x < 10) {
+            debugSetCell(x, y, 2);
+            x = (x + 1) | 0;
+        }
+        y = (y + 1) | 0;
+    }
+    debugClearLines();
+
+    return linesCleared | 0;
+}
+
+module.exports = {
+    initGame,
+    reset,
+    main,
+    moveLeft,
+    moveRight,
+    rotateCW,
+    rotateCCW,
+    softDrop,
+    hardDrop,
+    togglePause,
+    isPaused,
+    tick,
+    getCell,
+    getBoardWidth,
+    getBoardHeight,
+    getScore,
+    getLevel,
+    getLinesCleared,
+    getActivePieceType,
+    getNextPieceType,
+    isGameOver,
+    // Exposed for tests / debugging only — a render shim shouldn't need these.
+    getShapeBit,
+    checkCollision,
+    debugSetCell,
+    debugClearLines,
+};
