@@ -1,6 +1,6 @@
 # Tetris.Ohn
 
-A complete, playable Tetris written in [Ohnrscript](https://github.com/ohnrshyp/ohnrscript) — the same i32-only, no-GC, no-floats, no-dynamic-heap language used to build [`ohn-kernel`](https://github.com/ohnrshyp/ohnrscript/tree/main/packages-llvm/ohn-kernel).
+A playable Tetris written in [Ohnrscript](https://github.com/ohnrshyp/ohnrscript) — the same i32-only, no-GC, no-floats, no-dynamic-heap language used to build [`ohn-kernel`](https://github.com/ohnrshyp/ohnrscript/tree/main/packages-llvm/ohn-kernel).
 
 The engine lives in one file: [`tetris.ohn`](./tetris.ohn). A small HTML/canvas shim reads engine state and paints it — the same shape of split the V-language Doom port has with SDL.
 
@@ -8,14 +8,32 @@ The engine lives in one file: [`tetris.ohn`](./tetris.ohn). A small HTML/canvas 
 
 Open [`playground.built.html`](./playground.built.html) directly in a browser or `node play.js` for terminal. No server, no dependencies, no build step — one file, ~18KB, drop it anywhere. It also runs from `file://`, so you can double-click it.
 
+
 **Controls:**
-**←** / **→** move, **↓** soft drop, ↑ rotate clockwise, `Z` rotate counter-clockwise, `Space` hard drop, `P` pause, `R` restart.
 
-## Architecture in one paragraph
+&emsp; `P` pause &ensp; `R` restart &ensp; `←` / `→` move &ensp; `↓` soft drop &ensp; `↑` rotate clockwise &ensp; `Z` rotate counter-clockwise &ensp; `Space` hard drop
 
-`tetris.ohn` is one file with 37 functions, no `require()`, no arrays literals, no `switch`, no closures, no floats. The board is a 200-byte `Uint8Array` (10×20, one byte per cell). The 7 tetrominoes × 4 rotations are 28 entries in a module-level `Int32Array`, each a 16-bit mask over a 4×4 box. The RNG is a hand-rolled xorshift32 driving a Fisher-Yates 7-bag. Gravity is an integer frame counter. All arithmetic is `| 0`-cast. The compiled `tetris.js` is a 1:1 translation of the source — the V8 backend injects no runtime.
-
-The browser shim is deliberately logic-free: it reads state via query functions (`getCell`, `getScore`, `getActivePieceType`, ...) and issues movement calls (`moveLeft`, `rotateCW`, `hardDrop`, ...). No game logic lives outside `tetris.ohn`.
+<table>
+  <tr>
+    <td valign="top" width="57%">
+      <img width="100%" alt="Tetris Still picture" src="https://github.com/user-attachments/assets/b255ecb8-eb14-4f3d-91f3-ec1c59dcd8bf" />
+    </td>
+    <td valign="top" width="43%">
+       <h2>Architecture in one paragraph</h2>
+      <p>
+        <code>tetris.ohn</code> is one file with 37 functions, no <code>require()</code>, no arrays literals, no <code>switch</code>, no closures, no floats. The board is a 200-byte <code>Uint8Array</code> (10×20, one byte per cell).
+      </p>
+      <br>
+      <p>
+        The 7 tetrominoes × 4 rotations are 28 entries in a module-level <code>Int32Array</code>, each a 16-bit mask over a 4×4 box. The RNG is a hand-rolled xorshift32 driving a Fisher-Yates 7-bag. Gravity is an integer frame counter. All arithmetic is <code>| 0</code>-cast.
+      </p>
+      <br>
+      <p>
+        The compiled <code>tetris.js</code> is a 1:1 translation of the source — the V8 backend injects no runtime. The browser shim is deliberately logic-free: it reads state via query functions (<code>getCell</code>, <code>getScore</code>, <code>getActivePieceType</code>, ...) and issues movement calls (<code>moveLeft</code>, <code>rotateCW</code>, <code>hardDrop</code>, ...). Game logic lives entirely in <code>tetris.ohn</code>.
+      </p>
+    </td>
+  </tr>
+</table>
 
 ## Building from source
 
