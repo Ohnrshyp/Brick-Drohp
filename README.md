@@ -6,7 +6,7 @@ The engine lives in one file: [`tetris.ohn`](./tetris.ohn). A small HTML/canvas 
 
 ## **Play it:**
 
-Open [`playground.built.html`](./playground.built.html) directly in a browser or `node play.js` for terminal. No server, no dependencies, no build step — one file, ~18KB, drop it anywhere. It also runs from `file://`, so you can double-click it.
+Open [`playground.built.html`](./playground.built.html) directly in a browser or `node play.js` for terminal. No server, no dependencies, no build step — one file, ~21KB, drop it anywhere. It also runs from `file://`, so you can double-click it.
 
 
 **Controls:**
@@ -21,11 +21,11 @@ Open [`playground.built.html`](./playground.built.html) directly in a browser or
     <td valign="top" width="43%">
        <h2>Architecture in one paragraph</h2>
       <p>
-        <code>tetris.ohn</code> is one file with 37 functions, no <code>require()</code>, no arrays literals, no <code>switch</code>, no closures, no floats. The board is a 200-byte <code>Uint8Array</code> (10×20, one byte per cell).
+        <code>tetris.ohn</code> is one file with 44 functions, no <code>require()</code>, no arrays literals, no <code>switch</code>, no closures, no floats. The board is a 200-byte <code>Uint8Array</code> (10×20, one byte per cell).
       </p>
       <br>
       <p>
-        The 7 tetrominoes × 4 rotations are 28 entries in a module-level <code>Int32Array</code>, each a 16-bit mask over a 4×4 box. The RNG is a hand-rolled xorshift32 driving a Fisher-Yates 7-bag. Gravity is an integer frame counter. All arithmetic is <code>| 0</code>-cast.
+        The 7 tetrominoes × 4 rotations are 28 entries in a module-level <code>Int32Array</code>, each a 16-bit mask over a 4×4 box. The RNG is a hand-rolled xorshift32 driving a Fisher-Yates 7-bag. Gravity is an integer frame counter driven by the authentic NES frames-per-row table, reaching 1 frame/row at game level 30 — the NES level-29 "killscreen" equivalent. Colors are packed <code>0xRRGGBB</code> in a third arena. All arithmetic is <code>| 0</code>-cast.
       </p>
       <br>
       <p>
@@ -37,25 +37,29 @@ Open [`playground.built.html`](./playground.built.html) directly in a browser or
 
 ## Building from source
 
-Rebuilding `tetris.js` and `playground.built.html` requires the Ohnrscript compiler, which lives in the [main Ohnrscript repo](https://github.com/ohnrshyp/ohnrscript). Assuming a clone at `../ohnrscript` alongside this one:
+Rebuilding `tetris.js` and `playground.built.html` requires the Ohnrscript compiler, which lives in the [main Ohnrscript repo](https://github.com/ohnrshyp/ohnrscript). `build.js` resolves the compiler at `../compiler/scripts/compile.js`, so it expects **this repo to sit one directory inside an Ohnrscript clone**.
+
+From the `Tetris/` directory:
 
 `# Compile the engine to JS`
-`node ../ohnrscript/compiler/scripts/compile.js tetris.ohn -o tetris.js`
+`node ../compiler/scripts/compile.js tetris.ohn -o tetris.js`
 
 `# Run the tests against the compiled output`
-`npx jest`
+`npx jest --rootDir .`
 
-`# Rebuild the standalone browser file`
+`# Rebuild the standalone browser file (compiles, then inlines)`
 `node build.js`
+
+Two notes. `node build.js` does the compile step itself, so it's the only command you need for a full rebuild. And `--rootDir .` matters: this repo has no `package.json`, so a bare `npx jest` resolves its root to the enclosing Ohnrscript clone and runs that repo's compiler tests alongside these.
 
 ## What's in this repo
 
 | File | What it is |
 | :---- | :---- |
-| tetris.ohn | The engine. 37 functions. Board, tetromino shapes (all 4 rotations), collision, movement, rotation, gravity, 7-bag randomizer (xorshift32), line-clear, scoring, leveling. Written in the strict Ohnrscript subset defined in [`developer_guide.md`](https://github.com/ohnrshyp/ohnrscript/blob/main/developer_guide.md). |
+| tetris.ohn | The engine. 44 functions. Board, tetromino shapes (all 4 rotations), collision, movement, rotation, NES gravity table, 7-bag randomizer (xorshift32), line-clear, scoring, leveling, packed color palette. Written in the strict Ohnrscript subset defined in [`developer_guide.md`](https://github.com/ohnrshyp/ohnrscript/blob/main/developer_guide.md). |
 | tetris.js | Compiled output of `tetris.ohn` via the V8 backend. Generated, not hand-written — committed here because rebuilding requires the separate Ohnrscript compiler repo. |
 | playground.html | The browser shim template — `<canvas>` rendering, `keydown` handlers, `requestAnimationFrame` loop calling `tick()`. |
 | playground.built.html | **The hostable artifact.** `build.js` inlines the compiled engine into `playground.html` to produce this single self-contained file. |
 | build.js | Node script that inlines the compiled engine into the shim template. |
 | play.js  | Terminal frontend for the same engine — a second, logic-free shim reading state from `tetris.js` and painting the board with ANSI 256-color escapes. Run with `node play.js`. Requires a TTY.  |
-| tests/tetris.test.js | 16 jest tests running against the compiled JS — shape integrity across all rotations, wall collisions, gravity and locking, line-clear math (including the 1200-point Tetris bonus), leveling, 7-bag correctness, game-over handling. |
+| tests/ | 62 jest tests running against the compiled JS. `tetris.test.js` (22) — shape integrity across all rotations, wall collisions, gravity and locking, line-clear math (including the 1200-point Tetris bonus), leveling, 7-bag correctness, game-over handling. `gravity.test.js` (8) — the NES frames-per-row table, including the clamp past level 30. `whitelist.test.js` (28) — runs the built file's engine in a bare `vm` and asserts the browser only ever sees the renderer-facing API. `colors.test.js` (4) — the packed `0xRRGGBB` palette. |
