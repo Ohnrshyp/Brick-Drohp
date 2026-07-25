@@ -10,10 +10,11 @@ const SHAPE_TABLE_SIZE = 28;
 const SPAWN_X = 3;
 const SPAWN_Y = 0;
 const BASE_TICK_THRESHOLD = 48;
-const MIN_TICK_THRESHOLD = 6;
 const LINES_PER_LEVEL = 10;
+const GRAVITY_TABLE_SIZE = 30;
 let board = new Uint8Array(BOARD_SIZE);
 let pieceShapes = new Int32Array(SHAPE_TABLE_SIZE);
+let gravityTable = new Int32Array(GRAVITY_TABLE_SIZE);
 let bag = new Int32Array(PIECE_COUNT);
 let bagPos = 7;
 let rngState = 1;
@@ -75,6 +76,40 @@ function initPieceShapes() {
     pieceShapes[25] = 0x622;
     pieceShapes[26] = 0x2e0;
     pieceShapes[27] = 0x4460;
+    return 0;
+}
+
+function initGravityTable() {
+    gravityTable[0] = 48;
+    gravityTable[1] = 43;
+    gravityTable[2] = 38;
+    gravityTable[3] = 33;
+    gravityTable[4] = 28;
+    gravityTable[5] = 23;
+    gravityTable[6] = 18;
+    gravityTable[7] = 13;
+    gravityTable[8] = 8;
+    gravityTable[9] = 6;
+    gravityTable[10] = 5;
+    gravityTable[11] = 5;
+    gravityTable[12] = 5;
+    gravityTable[13] = 4;
+    gravityTable[14] = 4;
+    gravityTable[15] = 4;
+    gravityTable[16] = 3;
+    gravityTable[17] = 3;
+    gravityTable[18] = 3;
+    gravityTable[19] = 2;
+    gravityTable[20] = 2;
+    gravityTable[21] = 2;
+    gravityTable[22] = 2;
+    gravityTable[23] = 2;
+    gravityTable[24] = 2;
+    gravityTable[25] = 2;
+    gravityTable[26] = 2;
+    gravityTable[27] = 2;
+    gravityTable[28] = 2;
+    gravityTable[29] = 1;
     return 0;
 }
 
@@ -253,14 +288,17 @@ function applyLineClearScore(cleared) {
 }
 
 function updateLevel() {
-    let newLevel = 1 + linesCleared / LINES_PER_LEVEL | 0 | 0;
+    let newLevel = 1 + (linesCleared / LINES_PER_LEVEL | 0) | 0;
     if (newLevel !== level) {
         level = newLevel | 0;
-        let newThreshold = BASE_TICK_THRESHOLD - (level - 1) * 4 | 0;
-        if (newThreshold < MIN_TICK_THRESHOLD) {
-            newThreshold = MIN_TICK_THRESHOLD;
+        let idx = level - 1 | 0;
+        if (idx < 0) {
+            idx = 0;
         }
-        tickThreshold = newThreshold | 0;
+        if (idx >= GRAVITY_TABLE_SIZE) {
+            idx = GRAVITY_TABLE_SIZE - 1 | 0;
+        }
+        tickThreshold = gravityTable[idx] | 0;
     }
     return 0;
 }
@@ -277,6 +315,7 @@ function initGame(seed) {
         i = i + 1 | 0;
     }
     initPieceShapes();
+    initGravityTable();
     bagPos = 7;
     score = 0;
     level = 1;
@@ -284,7 +323,7 @@ function initGame(seed) {
     gameOver = 0;
     paused = 0;
     tickCounter = 0;
-    tickThreshold = BASE_TICK_THRESHOLD;
+    tickThreshold = gravityTable[0] | 0;
     nextType = drawFromBag() | 0;
     spawnPiece();
     return 0;
@@ -478,6 +517,10 @@ function debugClearLines() {
     return clearLines() | 0;
 }
 
+function getTickThreshold() {
+    return tickThreshold | 0;
+}
+
 function main() {
     initGame(42);
     moveLeft();
@@ -525,4 +568,5 @@ module.exports = {
     checkCollision,
     debugSetCell,
     debugClearLines,
+    getTickThreshold,
 };
