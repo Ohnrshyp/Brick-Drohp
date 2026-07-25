@@ -12,9 +12,11 @@ const SPAWN_Y = 0;
 const BASE_TICK_THRESHOLD = 48;
 const LINES_PER_LEVEL = 10;
 const GRAVITY_TABLE_SIZE = 30;
+const COLOR_TABLE_SIZE = 8;
 let board = new Uint8Array(BOARD_SIZE);
 let pieceShapes = new Int32Array(SHAPE_TABLE_SIZE);
 let gravityTable = new Int32Array(GRAVITY_TABLE_SIZE);
+let colorTable = new Int32Array(COLOR_TABLE_SIZE);
 let bag = new Int32Array(PIECE_COUNT);
 let bagPos = 7;
 let rngState = 1;
@@ -111,6 +113,28 @@ function initGravityTable() {
     gravityTable[28] = 2;
     gravityTable[29] = 1;
     return 0;
+}
+
+function initColorTable() {
+    colorTable[0] = 0;
+    colorTable[1] = 0x4dd8e6;
+    colorTable[2] = 0xe6d84d;
+    colorTable[3] = 0xb96be6;
+    colorTable[4] = 0x63e66b;
+    colorTable[5] = 0xe6636b;
+    colorTable[6] = 0x6b86e6;
+    colorTable[7] = 0xe69a4d;
+    return 0;
+}
+
+function getPieceColor(id) {
+    if (id < 0) {
+        return 0;
+    }
+    if (id >= COLOR_TABLE_SIZE) {
+        return 0;
+    }
+    return colorTable[id] | 0;
 }
 
 function getShapeBit(type, rotation, row, col) {
@@ -316,6 +340,7 @@ function initGame(seed) {
     }
     initPieceShapes();
     initGravityTable();
+    initColorTable();
     bagPos = 7;
     score = 0;
     level = 1;
@@ -576,6 +601,7 @@ module.exports = {
     tick,
     getCell,
     getNextCell,
+    getPieceColor,
     getBoardWidth,
     getBoardHeight,
     getScore,

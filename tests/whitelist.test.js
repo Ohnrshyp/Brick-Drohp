@@ -32,7 +32,7 @@ const ALLOWED = [
     'moveLeft', 'moveRight', 'rotateCW', 'rotateCCW',
     'softDrop', 'hardDrop', 'tick',
     'togglePause', 'isPaused',
-    'getCell', 'getNextCell',
+    'getCell', 'getNextCell', 'getPieceColor',
     'getBoardWidth', 'getBoardHeight',
     'getScore', 'getLevel', 'getLinesCleared',
     'getActivePieceType', 'getNextPieceType', 'isGameOver',

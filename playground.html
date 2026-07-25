@@ -169,7 +169,7 @@ __OHNRSCRIPT_COMPILED_JS__
       'moveLeft', 'moveRight', 'rotateCW', 'rotateCCW',
       'softDrop', 'hardDrop', 'tick',
       'togglePause', 'isPaused',
-      'getCell', 'getNextCell',
+      'getCell', 'getNextCell', 'getPieceColor',
       'getBoardWidth', 'getBoardHeight',
       'getScore', 'getLevel', 'getLinesCleared',
       'getActivePieceType', 'getNextPieceType', 'isGameOver'
@@ -186,16 +186,6 @@ __OHNRSCRIPT_COMPILED_JS__
   var game = window.OhnrscriptTetris;
 
   var CELL = 24;
-  var COLORS = [
-    null,        // 0 = empty, never drawn
-    '#4dd8e6',   // 1 = I
-    '#e6d84d',   // 2 = O
-    '#b96be6',   // 3 = T
-    '#63e66b',   // 4 = S
-    '#e6636b',   // 5 = Z
-    '#6b86e6',   // 6 = J
-    '#e69a4d',   // 7 = L
-  ];
 
   var boardCanvas = document.getElementById('board');
   var boardCtx = boardCanvas.getContext('2d');
@@ -211,10 +201,12 @@ __OHNRSCRIPT_COMPILED_JS__
   var boardW = game.getBoardWidth();
   var boardH = game.getBoardHeight();
 
+  // The engine owns piece-identity-to-color; this only formats the packed
+  // 0xRRGGBB int it hands back as a CSS hex string.
   function drawCell(ctx, px, py, size, colorId) {
-    var color = COLORS[colorId];
-    if (!color) return;
-    ctx.fillStyle = color;
+    if (colorId === 0) return;
+    var packed = game.getPieceColor(colorId);
+    ctx.fillStyle = '#' + ('000000' + packed.toString(16)).slice(-6);
     ctx.fillRect(px + 1, py + 1, size - 2, size - 2);
   }
 
