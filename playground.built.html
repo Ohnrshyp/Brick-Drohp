@@ -629,6 +629,25 @@ function getCell(x, y) {
     return board[boardIndex(x, y)] | 0;
 }
 
+function getNextCell(row, col) {
+    if (row < 0) {
+        return 0;
+    }
+    if (row >= BOX) {
+        return 0;
+    }
+    if (col < 0) {
+        return 0;
+    }
+    if (col >= BOX) {
+        return 0;
+    }
+    if (getShapeBit(nextType, 0, row, col) === 1) {
+        return nextType + 1 | 0;
+    }
+    return 0;
+}
+
 function getBoardWidth() {
     return BOARD_WIDTH;
 }
@@ -714,6 +733,7 @@ module.exports = {
     isPaused,
     tick,
     getCell,
+    getNextCell,
     getBoardWidth,
     getBoardHeight,
     getScore,
@@ -730,7 +750,25 @@ module.exports = {
 };
 
   })(module, module.exports);
-  window.OhnrscriptTetris = module.exports;
+  // Only the renderer-facing API reaches the page. The engine's test/debug
+  // hooks and its native entry point stay inside the module but off window;
+  // tests reach them via require('./tetris.js') instead. The exact excluded
+  // set is asserted by the BLOCKED list in tests/whitelist.test.js.
+  window.OhnrscriptTetris = (function (m) {
+    var api = {};
+    var allow = [
+      'initGame', 'reset',
+      'moveLeft', 'moveRight', 'rotateCW', 'rotateCCW',
+      'softDrop', 'hardDrop', 'tick',
+      'togglePause', 'isPaused',
+      'getCell', 'getNextCell',
+      'getBoardWidth', 'getBoardHeight',
+      'getScore', 'getLevel', 'getLinesCleared',
+      'getActivePieceType', 'getNextPieceType', 'isGameOver'
+    ];
+    for (var i = 0; i < allow.length; i++) { api[allow[i]] = m[allow[i]]; }
+    return api;
+  })(module.exports);
 </script>
 
 <script>
@@ -788,13 +826,10 @@ module.exports = {
     nextCtx.fillStyle = '#05060a';
     nextCtx.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
 
-    var type = game.getNextPieceType();
     var size = 20;
     for (var row = 0; row < 4; row++) {
       for (var col = 0; col < 4; col++) {
-        if (game.getShapeBit(type, 0, row, col) === 1) {
-          drawCell(nextCtx, col * size + 8, row * size + 8, size, type + 1);
-        }
+        drawCell(nextCtx, col * size + 8, row * size + 8, size, game.getNextCell(row, col));
       }
     }
   }

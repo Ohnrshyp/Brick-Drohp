@@ -578,6 +578,28 @@ function getCell(x, y) {
     return board[boardIndex(x, y)] | 0;
 }
 
+// Returns the color id (0 empty, 1-7) to draw at (row, col) of the
+// next-piece preview box. The preview always renders rotation 0. This is
+// the only function a renderer needs to draw the next-piece panel.
+function getNextCell(row, col) {
+    if (row < 0) {
+        return 0;
+    }
+    if (row >= BOX) {
+        return 0;
+    }
+    if (col < 0) {
+        return 0;
+    }
+    if (col >= BOX) {
+        return 0;
+    }
+    if (getShapeBit(nextType, 0, row, col) === 1) {
+        return (nextType + 1) | 0;
+    }
+    return 0;
+}
+
 function getBoardWidth() {
     return BOARD_WIDTH;
 }
@@ -680,6 +702,7 @@ module.exports = {
     isPaused,
     tick,
     getCell,
+    getNextCell,
     getBoardWidth,
     getBoardHeight,
     getScore,

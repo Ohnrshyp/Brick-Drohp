@@ -24,12 +24,11 @@ function pad(str, visibleLen, width) {
 }
 
 function buildNextBoxLines() {
-    const type = t.getNextPieceType();
     const lines = [];
     for (let row = 0; row < 4; row++) {
         let s = '';
         for (let col = 0; col < 4; col++) {
-            s += t.getShapeBit(type, 0, row, col) === 1 ? colorCell(type + 1) : colorCell(0);
+            s += colorCell(t.getNextCell(row, col));
         }
         lines.push(s);
     }

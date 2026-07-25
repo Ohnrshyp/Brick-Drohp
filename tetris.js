@@ -471,6 +471,25 @@ function getCell(x, y) {
     return board[boardIndex(x, y)] | 0;
 }
 
+function getNextCell(row, col) {
+    if (row < 0) {
+        return 0;
+    }
+    if (row >= BOX) {
+        return 0;
+    }
+    if (col < 0) {
+        return 0;
+    }
+    if (col >= BOX) {
+        return 0;
+    }
+    if (getShapeBit(nextType, 0, row, col) === 1) {
+        return nextType + 1 | 0;
+    }
+    return 0;
+}
+
 function getBoardWidth() {
     return BOARD_WIDTH;
 }
@@ -556,6 +575,7 @@ module.exports = {
     isPaused,
     tick,
     getCell,
+    getNextCell,
     getBoardWidth,
     getBoardHeight,
     getScore,
