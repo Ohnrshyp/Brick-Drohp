@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 // play.js — terminal Tetris using the compiled brick-drohp.ohn engine.
 // Zero game logic here, same as playground.html: reads getCell()/getScore()/etc.
 // and calls the engine's exported input functions.
