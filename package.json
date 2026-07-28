@@ -1,0 +1,18 @@
+{
+  "name": "@ohnrshyp/brick-drohp",
+  "version": "1.0.1",
+  "description": "Terminal Brick Drohp built with Ohnrscript",
+  "main": "brick-drohp.js",
+  "bin": {
+    "brick-drohp": "./play.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "brick-drohp",
+    "ohnrscript"
+  ],
+  "author": "",
+  "license": "ISC"
+}

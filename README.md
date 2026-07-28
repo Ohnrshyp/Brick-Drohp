@@ -1,13 +1,31 @@
-# Tetris.Ohn
+# BrickDrohp.Ohn
 
-A playable Tetris written in [Ohnrscript](https://github.com/ohnrshyp/ohnrscript) — the same i32-only, no-GC, no-floats, no-dynamic-heap language used to build [`ohn-kernel`](https://github.com/ohnrshyp/ohnrscript/tree/main/packages-llvm/ohn-kernel).
+[![NPM Version](https://img.shields.io/npm/v/@ohnrshyp/brick-drohp)](https://www.npmjs.com/package/@ohnrshyp/brick-drohp)
 
-The engine lives in one file: [`tetris.ohn`](./tetris.ohn). A small HTML/canvas shim reads engine state and paints it — the same shape of split the V-language Doom port has with SDL.
+A playable Brick Drohp written in [Ohnrscript](https://github.com/ohnrshyp/ohnrscript) — the same i32-only, no-GC, no-floats, no-dynamic-heap language used to build [`ohn-kernel`](https://github.com/ohnrshyp/ohnrscript/tree/main/packages-llvm/ohn-kernel).
 
-## **Play it:**
+The engine lives in one file: [`brick-drohp.ohn`](./brick-drohp.ohn). A small HTML/canvas shim reads engine state and paints it — the same shape of split the V-language Doom port has with SDL.
 
-Open [`playground.built.html`](./playground.built.html) directly in a browser or `node play.js` for terminal. No server, no dependencies, no build step — one file, ~21KB, drop it anywhere. It also runs from `file://`, so you can double-click it.
+## 🚀 Quick Start
 
+Play immediately from your terminal without installing:
+
+```bash
+npx @ohnrshyp/brick-drohp
+```
+
+Or install it globally to play offline anytime:
+
+```bash
+npm install -g @ohnrshyp/brick-drohp
+brick-drohp
+```
+
+## 🎮 Other Ways to Play
+
+- **Play Online:** Play instantly in your browser at [ohnrshyp.com/#/games/falling-bricks](https://ohnrshyp.com/#/games/falling-bricks)
+- **Local Web Browser:** Open [`playground.built.html`](./playground.built.html) directly in a browser. No server, no dependencies, no build step — one file, ~21KB, drop it anywhere. It runs from `file://` so you can just double-click it.
+- **Source:** Clone this repo and run `node play.js`.
 
 **Controls:**
 
@@ -16,12 +34,12 @@ Open [`playground.built.html`](./playground.built.html) directly in a browser or
 <table>
   <tr>
     <td valign="top" width="57%">
-      <img width="100%" alt="Tetris Still picture" src="https://github.com/user-attachments/assets/b255ecb8-eb14-4f3d-91f3-ec1c59dcd8bf" />
+      
     </td>
     <td valign="top" width="43%">
        <h2>Architecture in one paragraph</h2>
       <p>
-        <code>tetris.ohn</code> is one file with 44 functions, no <code>require()</code>, no arrays literals, no <code>switch</code>, no closures, no floats. The board is a 200-byte <code>Uint8Array</code> (10×20, one byte per cell).
+        <code>brick-drohp.ohn</code> is one file with 44 functions, no <code>require()</code>, no arrays literals, no <code>switch</code>, no closures, no floats. The board is a 200-byte <code>Uint8Array</code> (10×20, one byte per cell).
       </p>
       <br>
       <p>
@@ -29,7 +47,7 @@ Open [`playground.built.html`](./playground.built.html) directly in a browser or
       </p>
       <br>
       <p>
-        The compiled <code>tetris.js</code> is a 1:1 translation of the source — the V8 backend injects no runtime. The browser shim is deliberately logic-free: it reads state via query functions (<code>getCell</code>, <code>getScore</code>, <code>getActivePieceType</code>, ...) and issues movement calls (<code>moveLeft</code>, <code>rotateCW</code>, <code>hardDrop</code>, ...). Game logic lives entirely in <code>tetris.ohn</code>.
+        The compiled <code>brick-drohp.js</code> is a 1:1 translation of the source — the V8 backend injects no runtime. The browser shim is deliberately logic-free: it reads state via query functions (<code>getCell</code>, <code>getScore</code>, <code>getActivePieceType</code>, ...) and issues movement calls (<code>moveLeft</code>, <code>rotateCW</code>, <code>hardDrop</code>, ...). Game logic lives entirely in <code>brick-drohp.ohn</code>.
       </p>
     </td>
   </tr>
@@ -37,12 +55,12 @@ Open [`playground.built.html`](./playground.built.html) directly in a browser or
 
 ## Building from source
 
-Rebuilding `tetris.js` and `playground.built.html` requires the Ohnrscript compiler, which lives in the [main Ohnrscript repo](https://github.com/ohnrshyp/ohnrscript). `build.js` resolves the compiler at `../compiler/scripts/compile.js`, so it expects **this repo to sit one directory inside an Ohnrscript clone**.
+Rebuilding `brick-drohp.js` and `playground.built.html` requires the Ohnrscript compiler, which lives in the [main Ohnrscript repo](https://github.com/ohnrshyp/ohnrscript). `build.js` resolves the compiler at `../compiler/scripts/compile.js`, so it expects **this repo to sit one directory inside an Ohnrscript clone**.
 
-From the `Tetris/` directory:
+From the `Brick Drohp/` directory:
 
 `# Compile the engine to JS`
-`node ../compiler/scripts/compile.js tetris.ohn -o tetris.js`
+`node ../compiler/scripts/compile.js brick-drohp.ohn -o brick-drohp.js`
 
 `# Run the tests against the compiled output`
 `npx jest --rootDir .`
@@ -56,10 +74,10 @@ Two notes. `node build.js` does the compile step itself, so it's the only comman
 
 | File | What it is |
 | :---- | :---- |
-| tetris.ohn | The engine. 44 functions. Board, tetromino shapes (all 4 rotations), collision, movement, rotation, NES gravity table, 7-bag randomizer (xorshift32), line-clear, scoring, leveling, packed color palette. Written in the strict Ohnrscript subset defined in [`developer_guide.md`](https://github.com/ohnrshyp/ohnrscript/blob/main/developer_guide.md). |
-| tetris.js | Compiled output of `tetris.ohn` via the V8 backend. Generated, not hand-written — committed here because rebuilding requires the separate Ohnrscript compiler repo. |
+| brick-drohp.ohn | The engine. 44 functions. Board, tetromino shapes (all 4 rotations), collision, movement, rotation, NES gravity table, 7-bag randomizer (xorshift32), line-clear, scoring, leveling, packed color palette. Written in the strict Ohnrscript subset defined in [`developer_guide.md`](https://github.com/ohnrshyp/ohnrscript/blob/main/developer_guide.md). |
+| brick-drohp.js | Compiled output of `brick-drohp.ohn` via the V8 backend. Generated, not hand-written — committed here because rebuilding requires the separate Ohnrscript compiler repo. |
 | playground.html | The browser shim template — `<canvas>` rendering, `keydown` handlers, `requestAnimationFrame` loop calling `tick()`. |
 | playground.built.html | **The hostable artifact.** `build.js` inlines the compiled engine into `playground.html` to produce this single self-contained file. |
 | build.js | Node script that inlines the compiled engine into the shim template. |
-| play.js  | Terminal frontend for the same engine — a second, logic-free shim reading state from `tetris.js` and painting the board with ANSI 256-color escapes. Run with `node play.js`. Requires a TTY.  |
-| tests/ | 62 jest tests running against the compiled JS. `tetris.test.js` (22) — shape integrity across all rotations, wall collisions, gravity and locking, line-clear math (including the 1200-point Tetris bonus), leveling, 7-bag correctness, game-over handling. `gravity.test.js` (8) — the NES frames-per-row table, including the clamp past level 30. `whitelist.test.js` (28) — runs the built file's engine in a bare `vm` and asserts the browser only ever sees the renderer-facing API. `colors.test.js` (4) — the packed `0xRRGGBB` palette. |
+| play.js  | Terminal frontend for the same engine — a second, logic-free shim reading state from `brick-drohp.js` and painting the board with ANSI 256-color escapes. Run with `node play.js`. Requires a TTY.  |
+| tests/ | 62 jest tests running against the compiled JS. `brick-drohp.test.js` (22) — shape integrity across all rotations, wall collisions, gravity and locking, line-clear math (including the 1200-point Brick Drohp bonus), leveling, 7-bag correctness, game-over handling. `gravity.test.js` (8) — the NES frames-per-row table, including the clamp past level 30. `whitelist.test.js` (28) — runs the built file's engine in a bare `vm` and asserts the browser only ever sees the renderer-facing API. `colors.test.js` (4) — the packed `0xRRGGBB` palette. |

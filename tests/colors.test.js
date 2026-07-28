@@ -1,6 +1,6 @@
 // colors.test.js
 // Verifies the packed 0xRRGGBB color table exposed by getPieceColor().
-const t = require('../tetris.js');
+const t = require('../brick-drohp.js');
 
 describe('packed color table', () => {
     test('ids 1-7 return the expected packed RGB values', () => {

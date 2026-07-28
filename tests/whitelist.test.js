@@ -18,13 +18,13 @@ function loadBrowserApi() {
     const m = html.match(/^<script id="engine">$\r?\n([\s\S]*?)^<\/script>$/m);
     if (!m) throw new Error('engine script tag not found in playground.built.html');
     const src = m[1];
-    if (!src.includes('window.OhnrscriptTetris')) {
-        throw new Error('matched a script tag that does not assign window.OhnrscriptTetris');
+    if (!src.includes('window.OhnrscriptBrickDrohp')) {
+        throw new Error('matched a script tag that does not assign window.OhnrscriptBrickDrohp');
     }
     const sandbox = { window: {} };
     vm.createContext(sandbox);
     vm.runInContext(src, sandbox);
-    return sandbox.window.OhnrscriptTetris;
+    return sandbox.window.OhnrscriptBrickDrohp;
 }
 
 const ALLOWED = [

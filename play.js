@@ -1,4 +1,4 @@
-// play.js — terminal Tetris using the compiled tetris.ohn engine.
+// play.js — terminal Tetris using the compiled brick-drohp.ohn engine.
 // Zero game logic here, same as playground.html: reads getCell()/getScore()/etc.
 // and calls the engine's exported input functions.
 //
@@ -7,7 +7,7 @@
 'use strict';
 
 const readline = require('readline');
-const t = require('./tetris.js');
+const t = require('./brick-drohp.js');
 
 const CELL = '  '; // two chars per board cell, matches roughly-square terminal glyphs
 const COLOR_CODES = [null, 51, 220, 135, 78, 203, 69, 208]; // index = colorId (0 empty..7)

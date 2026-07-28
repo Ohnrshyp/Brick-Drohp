@@ -1,9 +1,9 @@
-// tetris.test.js
-// Tests run against the COMPILED output of tetris.ohn (tetris.js),
+// brick-drohp.test.js
+// Tests run against the COMPILED output of brick-drohp.ohn (brick-drohp.js),
 // not hand-written JS — this is what actually verifies the Ohnrscript compiler
 // produced a correct, playable engine.
 
-const t = require('../tetris.js');
+const t = require('../brick-drohp.js');
 
 function renderBoard() {
     let rows = [];
@@ -181,14 +181,14 @@ describe('line clearing & scoring', () => {
         expect(t.getCell(0, 18)).toBe(0);
     });
 
-    test('clearing 4 lines at once (a Tetris) awards the correct bonus', () => {
+    test('clearing 4 lines at once (a Brick Drohp) awards the correct bonus', () => {
         t.initGame(6);
         for (let y = 16; y < 20; y++) {
             for (let x = 0; x < 10; x++) t.debugSetCell(x, y, 2);
         }
         const cleared = t.debugClearLines();
         expect(cleared).toBe(4);
-        // Level 1 tetris = 1200 * level(1) = 1200
+        // Level 1 brick drohp = 1200 * level(1) = 1200
         expect(t.getScore()).toBe(1200);
         expect(t.getLinesCleared()).toBe(4);
     });

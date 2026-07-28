@@ -1,7 +1,7 @@
-// tetris.ohn
-// Ohnrscript Example: Tetris Game Engine
+// brick-drohp.ohn
+// Ohnrscript Example: Brick Drohp Game Engine
 //
-// A complete Tetris engine written entirely in pure i32 arithmetic, following
+// A complete Brick Drohp engine written entirely in pure i32 arithmetic, following
 // the strict Data-Oriented Design (DOD) rules in developer_guide.md:
 //   - No dynamic objects, no strings, no floats, no switch, no closures.
 //   - All state lives in module-level TypedArray arenas / i32 globals,
@@ -15,14 +15,14 @@
 //
 // This file is the ENTIRE game engine: board state, collision, rotation,
 // line-clear, scoring, and level speed-up. It exports a small function-call
-// API (module.exports below). Nothing outside this file knows how Tetris
+// API (module.exports below). Nothing outside this file knows how Brick Drohp
 // works — a host (browser canvas, terminal renderer, etc.) only ever reads
 // getCell()/getScore()/etc. and calls the input functions. That mirrors how
 // the V-language Doom port keeps 100% of the game logic in V and only calls
 // out to SDL for pixels/input; here the "SDL" is a ~40-line JS/canvas shim.
 //
-// Compile (V8):    node compiler/scripts/compile.js tetris.ohn
-// Compile (LLVM):  node compiler/scripts/compile.js --target llvm tetris.ohn
+// Compile (V8):    node compiler/scripts/compile.js brick-drohp.ohn
+// Compile (LLVM):  node compiler/scripts/compile.js --target llvm brick-drohp.ohn
 
 'use strict';
 
@@ -106,7 +106,7 @@ function randRange(maxExclusive) {
 
 // ───────────────────────── Piece Shape Table ─────────────────────────
 // Generated from standard 4x4-box tetromino layouts. Bit index = row*4+col,
-// bit 0 = top-left of the box. See tests/tetris.test.js for a
+// bit 0 = top-left of the box. See tests/brick-drohp.test.js for a
 // rendered sanity check of every rotation.
 
 function initPieceShapes() {
@@ -672,7 +672,7 @@ function reset(seed) {
 }
 
 // ───────────────────────── Test-Only Hooks ─────────────────────────
-// Not part of the public "renderer" API — only used by tetris.test.js to
+// Not part of the public "renderer" API — only used by brick-drohp.test.js to
 // set up deterministic board scenarios (e.g. a near-full row) without
 // depending on random piece placement.
 
@@ -697,8 +697,8 @@ function getTickThreshold() {
 // to link a standalone binary (mirrors examples/hello-world.ohn). Runs a
 // short headless simulation — some real moves, then a forced 4-line clear —
 // and returns the total lines cleared (4) as the process exit code, so
-// `./tetris_native; echo $?` proves the compiled native binary actually
-// executed the Tetris engine's collision, movement, and line-clear logic.
+// `./brick-drohp_native; echo $?` proves the compiled native binary actually
+// executed the Brick Drohp engine's collision, movement, and line-clear logic.
 function main() {
     initGame(42);
     moveLeft();

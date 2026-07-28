@@ -1,6 +1,6 @@
 // gravity.test.js
 // Verifies the NES gravity table via linesCleared-driven level changes.
-const t = require('../tetris.js');
+const t = require('../brick-drohp.js');
 
 // Fill n full rows (n <= 20) at the bottom of the board and clear them.
 function addLines(n) {

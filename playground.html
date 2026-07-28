@@ -3,7 +3,7 @@
   playground.html — Ohnrscript Tetris playground shim.
 
   This file contains ZERO game logic. It does exactly three things:
-    1. Loads the compiled tetris.js (produced from tetris.ohn by the
+    1. Loads the compiled brick-drohp.js (produced from brick-drohp.ohn by the
        Ohnrscript V8 backend — see the <script id="engine"> tag below).
     2. Listens for keydown events and calls the engine's exported input
        functions (moveLeft, rotateCW, hardDrop, ...).
@@ -11,7 +11,7 @@
        for every cell the engine reports via getCell(x, y).
 
   Every rule of Tetris — collision, rotation, gravity, line-clearing,
-  scoring, game over — lives entirely in tetris.ohn / tetris.js. This is
+  scoring, game over — lives entirely in brick-drohp.ohn / brick-drohp.js. This is
   the same relationship the V-language Doom port has with SDL: the ported
   logic doesn't reimplement the platform layer, it just calls out to it.
 -->
@@ -144,14 +144,14 @@
       <div><b>&darr;</b> soft drop &nbsp; <b>Space</b> hard drop</div>
       <div><b>P</b> pause &nbsp; <b>R</b> restart</div>
     </div>
-    <div class="badge">engine: <b>tetris.ohn</b> → compiled to JS<br>this page: rendering shim only</div>
+    <div class="badge">engine: <b>brick-drohp.ohn</b> → compiled to JS<br>this page: rendering shim only</div>
   </div>
 </div>
 
 <!-- ============================================================ -->
-<!-- Compiled output of `node compiler/scripts/compile.js tetris.ohn`. -->
+<!-- Compiled output of `node compiler/scripts/compile.js brick-drohp.ohn`. -->
 <!-- Pasted verbatim below, wrapped so                                -->
-<!-- its CommonJS module.exports populates window.OhnrscriptTetris. -->
+<!-- its CommonJS module.exports populates window.OhnrscriptBrickDrohp. -->
 <!-- ============================================================ -->
 <script id="engine">
   var module = { exports: {} };
@@ -160,9 +160,9 @@ __OHNRSCRIPT_COMPILED_JS__
   })(module, module.exports);
   // Only the renderer-facing API reaches the page. The engine's test/debug
   // hooks and its native entry point stay inside the module but off window;
-  // tests reach them via require('./tetris.js') instead. The exact excluded
+  // tests reach them via require('./brick-drohp.js') instead. The exact excluded
   // set is asserted by the BLOCKED list in tests/whitelist.test.js.
-  window.OhnrscriptTetris = (function (m) {
+  window.OhnrscriptBrickDrohp = (function (m) {
     var api = {};
     var allow = [
       'initGame', 'reset',
@@ -183,7 +183,7 @@ __OHNRSCRIPT_COMPILED_JS__
 (function () {
   'use strict';
 
-  var game = window.OhnrscriptTetris;
+  var game = window.OhnrscriptBrickDrohp;
 
   var CELL = 24;
 
