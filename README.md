@@ -34,9 +34,9 @@ brick-drohp
 <table>
   <tr>
     <td valign="top" width="57%">
-      
+      <img width="100%" alt="Tetris Still picture" src="https://github.com/user-attachments/assets/b255ecb8-eb14-4f3d-91f3-ec1c59dcd8bf" />
     </td>
-    <td valign="top" width="43%">
+        <td valign="top" width="43%">
        <h2>Architecture in one paragraph</h2>
       <p>
         <code>brick-drohp.ohn</code> is one file with 44 functions, no <code>require()</code>, no arrays literals, no <code>switch</code>, no closures, no floats. The board is a 200-byte <code>Uint8Array</code> (10×20, one byte per cell).
